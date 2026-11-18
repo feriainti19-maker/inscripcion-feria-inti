@@ -79,8 +79,8 @@ td{font-size:14px;padding:14px;border-bottom:1px solid #EDF1F6;vertical-align:to
     <div class="tarjeta">
       <h2>Tu emprendimiento</h2>
       <div class="f"><label for="emprendimiento">Nombre del emprendimiento *</label><input id="emprendimiento" type="text" placeholder="Ej: Dulces de la Abuela"></div>
-      <div class="f"><label for="responsable">Responsable *</label><input id="responsable" type="text" placeholder="Nombre y apellido"></div>
-      <div class="f"><label for="productos">Productos a la venta</label><textarea id="productos" placeholder="Ej: mermeladas, alfajores, budines"></textarea></div>
+      <div class="f"><label for="responsable">Responsable principal *</label><input id="responsable" type="text" placeholder="Nombre y apellido"></div>
+      <div class="f"><label for="productos">Productos a la venta (no reventa)</label><textarea id="productos" placeholder="Ej: mermeladas, alfajores, budines"></textarea></div>
       <div class="f"><label for="email">Email *</label><input id="email" type="email" placeholder="tuemail@ejemplo.com"></div>
       <div class="f"><label for="telefono">Teléfono *</label><input id="telefono" type="tel" placeholder="11 1234-5678"></div>
     </div>
@@ -94,15 +94,13 @@ td{font-size:14px;padding:14px;border-bottom:1px solid #EDF1F6;vertical-align:to
       </button>
     </div>
     <div class="tarjeta">
-      <h2>¿Qué necesitan?</h2>
+      <h2>Mobiliario asignado</h2>
       <div class="dos">
-        <div class="f"><label for="mesas">Mesas</label>
-          <div class="contador"><button type="button" data-campo="mesas" data-paso="-1" aria-label="Una mesa menos">−</button><input id="mesas" type="number" min="0" max="20" inputmode="numeric" value="1"><button type="button" data-campo="mesas" data-paso="1" aria-label="Una mesa más">+</button></div>
-        </div>
-        <div class="f"><label for="sillas">Sillas</label>
-          <div class="contador"><button type="button" data-campo="sillas" data-paso="-1" aria-label="Una silla menos">−</button><input id="sillas" type="number" min="0" max="40" inputmode="numeric" value="2"><button type="button" data-campo="sillas" data-paso="1" aria-label="Una silla más">+</button></div>
-        </div>
+        <div class="stat" style="background:#F5F8FD;align-items:center;text-align:center"><span>Mesas</span><span>1</span></div>
+        <div class="stat" style="background:#F5F8FD;align-items:center;text-align:center"><span>Sillas</span><span>2</span></div>
       </div>
+      <p class="nota" style="text-align:left">Cada emprendimiento tiene asignada 1 mesa y 2 sillas.</p>
+      <input type="hidden" id="mesas" value="1"><input type="hidden" id="sillas" value="2">
     </div>
     <p class="error" id="form-error" role="alert"></p>
     <button class="btn" type="submit" id="form-boton">Enviar inscripción</button>
@@ -152,7 +150,10 @@ td{font-size:14px;padding:14px;border-bottom:1px solid #EDF1F6;vertical-align:to
         <span class="chip">Feria INTI · Organización</span>
         <h1 class="titulo" style="margin:0;font-weight:800;font-size:36px">Participantes inscriptos</h1>
       </div>
-      <button class="btn" type="button" id="org-pdf" style="width:auto;padding:0 22px;min-height:48px;font-size:15px;display:none">Descargar PDF</button>
+      <div id="org-botones" style="display:none;flex-wrap:wrap;gap:10px">
+        <button class="btn" type="button" id="org-pdf" style="width:auto;padding:0 22px;min-height:48px;font-size:15px">PDF con todos los datos</button>
+        <button class="btn sec" type="button" id="org-pdf-dni">PDF solo nombres y DNI</button>
+      </div>
     </div>
     <form id="org-login" class="tarjeta" style="max-width:420px" novalidate>
       <div class="f"><label for="clave">Clave de la organización</label><input id="clave" type="password" autocomplete="current-password"></div>
@@ -255,16 +256,6 @@ $('agregar-persona').addEventListener('click', () => {
   $('pn' + actuales.length).focus();
 });
 
-// ---------- Mesas y sillas (botones − y +) ----------
-document.querySelectorAll('.contador button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const input = $(btn.dataset.campo);
-    const max = parseInt(input.max, 10);
-    let v = (parseInt(input.value, 10) || 0) + parseInt(btn.dataset.paso, 10);
-    input.value = Math.max(0, Math.min(max, v));
-  });
-});
-
 function limpiarForm() {
   $('formulario').reset();
   $('mesas').value = 1;
@@ -275,8 +266,8 @@ function limpiarForm() {
 
 function cargarForm(d) {
   BASE.forEach(c => { $(c).value = d[c] || ''; });
-  if (d.mesas === '' || d.mesas == null) $('mesas').value = 1;
-  if (d.sillas === '' || d.sillas == null) $('sillas').value = 2;
+  $('mesas').value = 1;
+  $('sillas').value = 2;
   dibujarPersonas(d.personas || []);
   error('form-error', '');
 }
@@ -290,7 +281,7 @@ function leerForm() {
 
 function validar(d) {
   if (!d.emprendimiento) return 'Falta el nombre del emprendimiento.';
-  if (!d.responsable) return 'Falta el responsable.';
+  if (!d.responsable) return 'Falta el responsable principal.';
   if (!d.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return 'Revisá el email.';
   if (!d.telefono) return 'Falta el teléfono.';
   if (!d.personas.length) return 'Tiene que ir al menos una persona, con nombre y DNI.';
@@ -435,7 +426,7 @@ $('org-login').addEventListener('submit', async ev => {
     dibujarLista();
     $('org-login').style.display = 'none';
     $('org-datos').style.display = 'flex';
-    $('org-pdf').style.display = 'flex';
+    $('org-botones').style.display = 'flex';
   } catch (e) {
     error('org-error', 'No se pudo conectar. Revisá tu internet y probá de nuevo.');
   } finally {
@@ -459,6 +450,26 @@ $('org-pdf').addEventListener('click', () => {
     columnStyles: { 5: { halign: 'center', cellWidth: 14 }, 6: { halign: 'center', cellWidth: 14 } }
   });
   doc.save('participantes-feria-inti.pdf');
+});
+
+$('org-pdf-dni').addEventListener('click', () => {
+  if (!window.jspdf) { window.print(); return; }
+  const personas = [];
+  filasOrg.forEach(f => (f.personas || []).forEach(p => personas.push(p)));
+  const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  doc.setFontSize(16);
+  doc.text('Personas que asisten - Feria INTI', 14, 16);
+  doc.setFontSize(10);
+  doc.text('Total: ' + personas.length + ' personas   ·   ' + new Date().toLocaleDateString('es-AR'), 14, 23);
+  doc.autoTable({
+    startY: 28,
+    head: [['N°', 'Nombre y apellido', 'DNI']],
+    body: personas.map((p, i) => [i + 1, p.nombre, p.dni]),
+    styles: { fontSize: 10, cellPadding: 2.5 },
+    headStyles: { fillColor: [30, 78, 140] },
+    columnStyles: { 0: { cellWidth: 14, halign: 'center' }, 2: { cellWidth: 40 } }
+  });
+  doc.save('personas-dni-feria-inti.pdf');
 });
 
 // ---------- Navegación ----------
